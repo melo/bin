@@ -17,18 +17,36 @@ my $plist = Mac::PropertyList::parse_plist_file("$ENV{HOME}/Library/Safari/Histo
 for($plist->value->{WebHistoryDates}->value) {
     unshift @urls, $_->{''}->value;
 }
+my $total = @urls;
+say "Testing $total URLs";
 
 my %time_for;
+$time_for{$_} = 0 for @nameserver;
 
-for my $ns (@nameserver) {
-    $time_for{$ns} = 0;
-    my $res = Net::DNS::Resolver->new(nameservers => [$ns]);
-    for (@urls) {
-        my $host = URI->new($_)->host;
+my $count = 0;
+my $start_t = time;
+for my $url (@urls) {
+    $count++;
+    for my $ns (@nameserver) {
+        my $res = Net::DNS::Resolver->new(nameservers => [$ns]);
+        my $host;
+        eval { $host = URI->new($url)->host };
+        say "Skipping URL '$_'", next unless $host;
 
         my $t = time;
         my $answer = $res->query($host);
-        $time_for{$ns} += time - $t;
+        my $d = $time_for{$ns} += time - $t;
+    }
+    
+    if ($count % 100 == 0) {
+        say "At $count:";
+        for my $ns (@nameserver) {
+            say "  $ns: $time_for{$ns} => ", $time_for{$ns} / $count;
+        }
+        say "ETA: ", ((time-$start_t)*$total)/$count;
+    }
+    elsif ($count % 10 == 0) {
+        say "... $count/$total URLs done";
     }
 }
 
