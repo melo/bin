@@ -7,7 +7,8 @@ use YAML qw(Dump);
 use Time::HiRes qw(time);
 
 local $/ = undef;
-my @nameserver = split "\n", <DATA>;
+my @nameserver = @ARGV;
+@nameserver = split "\n", <DATA> unless @nameserver;
 say Dump({"Testing Servers" => \@nameserver});
 
 my @urls;
